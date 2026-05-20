@@ -149,7 +149,7 @@ Respond ONLY in valid JSON format (no markdown, no extra text):
 
   try {
     const response = await callGemini(prompt)
-    const jsonMatch = response.match(/\{[\s\S]*\}/s)
+    const jsonMatch = response.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('Invalid JSON in response')
     return JSON.parse(jsonMatch[0])
   } catch (error) {
