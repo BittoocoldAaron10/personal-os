@@ -13,7 +13,7 @@ export default function VoiceInputButton({ onTranscript, isLoading }: VoiceInput
   const [supported, setSupported] = useState(true)
 
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) {
       setSupported(false)
       return
