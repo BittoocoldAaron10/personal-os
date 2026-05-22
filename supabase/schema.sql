@@ -84,6 +84,21 @@ CREATE TABLE IF NOT EXISTS calendar_events (
   description TEXT,
   start_time TIMESTAMP WITH TIME ZONE NOT NULL,
   end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+  google_event_id TEXT,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS calendar_events_google_event_id_idx
+  ON calendar_events (user_id, google_event_id);
+
+-- Google Calendar connection settings (one row per user)
+CREATE TABLE IF NOT EXISTS calendar_sync (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  google_calendar_id TEXT NOT NULL,
+  timezone TEXT NOT NULL DEFAULT 'UTC',
+  enabled BOOLEAN DEFAULT TRUE,
+  last_synced_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -104,6 +119,7 @@ ALTER TABLE nutrition_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE health_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE calendar_sync ENABLE ROW LEVEL SECURITY;
 ALTER TABLE memory ENABLE ROW LEVEL SECURITY;
 
 -- Tasks policies
@@ -147,6 +163,12 @@ CREATE POLICY "Users can view own events" ON calendar_events FOR SELECT USING (a
 CREATE POLICY "Users can insert own events" ON calendar_events FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own events" ON calendar_events FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own events" ON calendar_events FOR DELETE USING (auth.uid() = user_id);
+
+-- Calendar sync policies
+CREATE POLICY "Users can view own sync" ON calendar_sync FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own sync" ON calendar_sync FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own sync" ON calendar_sync FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own sync" ON calendar_sync FOR DELETE USING (auth.uid() = user_id);
 
 -- Memory policies
 CREATE POLICY "Users can view own memory" ON memory FOR SELECT USING (auth.uid() = user_id);

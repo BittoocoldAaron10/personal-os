@@ -73,6 +73,17 @@ export interface CalendarEvent {
   description?: string
   start_time: string
   end_time: string
+  google_event_id?: string | null
+  updated_at?: string
+  created_at: string
+}
+
+export interface CalendarSync {
+  user_id: string
+  google_calendar_id: string
+  timezone: string
+  enabled: boolean
+  last_synced_at?: string | null
   created_at: string
 }
 
