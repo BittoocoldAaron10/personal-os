@@ -1,9 +1,4 @@
-export interface User {
-  id: string
-  email: string
-  name: string
-  created_at: string
-}
+export const TASK_CATEGORIES = ['Work', 'Studies', 'Workout', 'Health', 'Hobbies', 'Personal'] as const
 
 export interface Task {
   id: string
@@ -14,7 +9,7 @@ export interface Task {
   priority: 'high' | 'medium' | 'low'
   status: 'todo' | 'in_progress' | 'done'
   created_at: string
-  due_date?: string
+  due_date?: string | null
   is_key: boolean
 }
 
@@ -24,15 +19,9 @@ export interface Habit {
   name: string
   frequency: string
   completed_today: boolean
+  streak_count?: number
+  completed_dates?: string[]
   created_at: string
-  subtasks?: HabitSubtask[]
-}
-
-export interface HabitSubtask {
-  id: string
-  habit_id: string
-  name: string
-  completed: boolean
 }
 
 export interface JournalEntry {
@@ -77,10 +66,29 @@ export interface Goal {
   created_at: string
 }
 
+export interface CalendarEvent {
+  id: string
+  user_id: string
+  title: string
+  description?: string
+  start_time: string
+  end_time: string
+  created_at: string
+}
+
 export interface Memory {
   id: string
   user_id: string
   key: string
   value: string
   created_at: string
+}
+
+export type CaptureType = 'task' | 'meal' | 'journal' | 'event' | 'goal'
+
+export interface OperatorProfile {
+  name: string
+  role: string
+  city: string
+  focus: string
 }

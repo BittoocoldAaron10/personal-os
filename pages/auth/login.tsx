@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import { Loader2, ArrowRight } from 'lucide-react'
 
 export default function Login() {
   const router = useRouter()
@@ -14,77 +15,76 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         setError(error.message)
         return
       }
-
       router.push('/dashboard')
-    } catch (err) {
-      setError('An error occurred. Please try again.')
+    } catch {
+      setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
-      <div className="w-full max-w-md">
-        <div className="card">
-          <h1 className="text-3xl font-bold mb-2 text-center text-white">Personal OS</h1>
-          <p className="text-gray-400 text-center mb-8">Your AI-powered operating system</p>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-[380px] fadeup">
+        <div className="flex items-center gap-2 justify-center mb-6">
+          <span className="h-2 w-2 rounded-full bg-accent blink shadow-glow" />
+          <span className="font-mono text-[14px] font-semibold tracking-wide text-ink">PERSONAL OS</span>
+          <span className="font-mono text-[11px] text-ink-faint">// V1.0</span>
+        </div>
+
+        <div className="panel shadow-panel p-6">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-ink-faint mb-1">Authenticate</div>
+          <h1 className="text-[18px] text-ink mb-5">Sign in to your OS</h1>
 
           {error && (
-            <div className="bg-red-900 border border-red-700 text-red-100 px-4 py-3 rounded-lg mb-6">
+            <div className="mb-4 px-3 py-2 rounded-md border border-hot/30 bg-hot/10 text-hot text-[12px]">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-3">
             <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
+              <label className="font-mono text-[9px] uppercase tracking-widest text-ink-faint">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                placeholder="your@email.com"
                 required
+                placeholder="you@email.com"
+                className="w-full px-3 py-2 text-[13px] mt-1"
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium mb-2">Password</label>
+              <label className="font-mono text-[9px] uppercase tracking-widest text-ink-faint">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                placeholder="••••••••"
                 required
+                placeholder="••••••••"
+                className="w-full px-3 py-2 text-[13px] mt-1"
               />
             </div>
-
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn btn-primary py-3 mt-6 disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 mt-2 rounded-md bg-accent/15 text-accent font-mono text-[12px] uppercase tracking-wider hover:bg-accent/25 transition-colors disabled:opacity-50"
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? <Loader2 size={14} className="spin" /> : <ArrowRight size={14} />}
+              {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
 
-          <p className="text-center text-gray-400 mt-6">
-            Don't have an account?{' '}
-            <Link href="/auth/signup" className="text-blue-500 hover:text-blue-400">
-              Sign up
+          <p className="text-center text-[12px] text-ink-faint mt-5">
+            No account?{' '}
+            <Link href="/auth/signup" className="text-accent hover:text-accent-bright transition-colors">
+              Create one
             </Link>
           </p>
         </div>

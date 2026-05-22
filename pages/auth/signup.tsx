@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import { Loader2, ArrowRight, Check } from 'lucide-react'
 
 export default function Signup() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -15,103 +16,104 @@ export default function Signup() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setLoading(true)
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      setLoading(false)
+    if (password !== confirm) {
+      setError('Passwords do not match.')
       return
     }
-
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.')
+      return
+    }
+    setLoading(true)
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      })
-
+      const { error } = await supabase.auth.signUp({ email, password })
       if (error) {
         setError(error.message)
         return
       }
-
       setSuccess(true)
-      setTimeout(() => router.push('/auth/login'), 2000)
-    } catch (err) {
-      setError('An error occurred. Please try again.')
+      setTimeout(() => router.push('/auth/login'), 1900)
+    } catch {
+      setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
-      <div className="w-full max-w-md">
-        <div className="card">
-          <h1 className="text-3xl font-bold mb-2 text-center text-white">Personal OS</h1>
-          <p className="text-gray-400 text-center mb-8">Create your account</p>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-[380px] fadeup">
+        <div className="flex items-center gap-2 justify-center mb-6">
+          <span className="h-2 w-2 rounded-full bg-accent blink shadow-glow" />
+          <span className="font-mono text-[14px] font-semibold tracking-wide text-ink">PERSONAL OS</span>
+          <span className="font-mono text-[11px] text-ink-faint">// V1.0</span>
+        </div>
+
+        <div className="panel shadow-panel p-6">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-ink-faint mb-1">Provision</div>
+          <h1 className="text-[18px] text-ink mb-5">Create your OS</h1>
 
           {success && (
-            <div className="bg-green-900 border border-green-700 text-green-100 px-4 py-3 rounded-lg mb-6">
-              Account created! Redirecting to login...
+            <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded-md border border-accent/30 bg-accent/10 text-accent text-[12px]">
+              <Check size={13} /> Account created — redirecting to sign in…
             </div>
           )}
-
           {error && (
-            <div className="bg-red-900 border border-red-700 text-red-100 px-4 py-3 rounded-lg mb-6">
+            <div className="mb-4 px-3 py-2 rounded-md border border-hot/30 bg-hot/10 text-hot text-[12px]">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSignup} className="space-y-4">
+          <form onSubmit={handleSignup} className="space-y-3">
             <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
+              <label className="font-mono text-[9px] uppercase tracking-widest text-ink-faint">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                placeholder="your@email.com"
                 required
+                placeholder="you@email.com"
+                className="w-full px-3 py-2 text-[13px] mt-1"
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium mb-2">Password</label>
+              <label className="font-mono text-[9px] uppercase tracking-widest text-ink-faint">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                placeholder="••••••••"
                 required
+                placeholder="••••••••"
+                className="w-full px-3 py-2 text-[13px] mt-1"
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium mb-2">Confirm Password</label>
+              <label className="font-mono text-[9px] uppercase tracking-widest text-ink-faint">
+                Confirm password
+              </label>
               <input
                 type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                placeholder="••••••••"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
                 required
+                placeholder="••••••••"
+                className="w-full px-3 py-2 text-[13px] mt-1"
               />
             </div>
-
             <button
               type="submit"
-              disabled={loading}
-              className="w-full btn btn-primary py-3 mt-6 disabled:opacity-50"
+              disabled={loading || success}
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 mt-2 rounded-md bg-accent/15 text-accent font-mono text-[12px] uppercase tracking-wider hover:bg-accent/25 transition-colors disabled:opacity-50"
             >
-              {loading ? 'Creating account...' : 'Sign up'}
+              {loading ? <Loader2 size={14} className="spin" /> : <ArrowRight size={14} />}
+              {loading ? 'Creating…' : 'Create account'}
             </button>
           </form>
 
-          <p className="text-center text-gray-400 mt-6">
+          <p className="text-center text-[12px] text-ink-faint mt-5">
             Already have an account?{' '}
-            <Link href="/auth/login" className="text-blue-500 hover:text-blue-400">
-              Login
+            <Link href="/auth/login" className="text-accent hover:text-accent-bright transition-colors">
+              Sign in
             </Link>
           </p>
         </div>

@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS habits (
   frequency TEXT NOT NULL DEFAULT 'daily',
   completed_today BOOLEAN DEFAULT FALSE,
   streak_count INT DEFAULT 0,
+  completed_dates TEXT[] DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

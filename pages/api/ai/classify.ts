@@ -1,8 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { classifyTask } from '@/lib/ai/gemini'
 import { supabaseServer } from '@/lib/supabase'
+import { TASK_CATEGORIES } from '@/lib/types'
 
-const categories = ['Workout', 'Studies', 'Hobbies', 'Work', 'Personal', 'Health', 'Finance']
+const categories = TASK_CATEGORIES as unknown as string[]
 
 export default async function handler(
   req: NextApiRequest,
@@ -34,7 +35,7 @@ export default async function handler(
           category: classified.category || 'Personal',
           priority: classified.priority || 'medium',
           status: 'todo',
-          is_key: false,
+          is_key: !!classified.is_key,
         },
       ])
       .select()

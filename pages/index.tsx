@@ -6,20 +6,14 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        router.push('/dashboard')
-      } else {
-        router.push('/auth/login')
-      }
-    }
-    checkAuth()
+    supabase.auth.getSession().then(({ data }) => {
+      router.replace(data.session ? '/dashboard' : '/auth/login')
+    })
   }, [router])
 
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="text-white">Redirecting...</div>
+      <span className="font-mono text-[12px] uppercase tracking-widest text-ink-faint blink">Routing…</span>
     </div>
   )
 }

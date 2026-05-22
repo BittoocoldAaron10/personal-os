@@ -12,6 +12,7 @@ export default async function handler(
 
   try {
     const { mealDescription, mealType, userId } = req.body
+    const date: string = req.body.date || new Date().toISOString().split('T')[0]
 
     if (!mealDescription || !userId) {
       return res.status(400).json({ error: 'Missing meal description or userId' })
@@ -33,7 +34,7 @@ export default async function handler(
           protein: estimation.protein_grams || 0,
           carbs: estimation.carbs_grams || 0,
           fat: estimation.fat_grams || 0,
-          date: new Date().toISOString().split('T')[0],
+          date,
         },
       ])
       .select()
