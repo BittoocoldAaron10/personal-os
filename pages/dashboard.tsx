@@ -6,7 +6,8 @@ import OperatorCard from '@/components/cards/OperatorCard'
 import SessionCard from '@/components/cards/SessionCard'
 import HabitsCard from '@/components/cards/HabitsCard'
 import CalendarCard from '@/components/cards/CalendarCard'
-import CompletionsCard from '@/components/cards/CompletionsCard'
+import GameTimeBankCard from '@/components/cards/GameTimeBankCard'
+import BlocklistCard from '@/components/cards/BlocklistCard'
 import KeyBlockersCard from '@/components/cards/KeyBlockersCard'
 import NutritionCard from '@/components/cards/NutritionCard'
 import GoalsCard from '@/components/cards/GoalsCard'
@@ -42,7 +43,8 @@ export default function Home() {
             <CalendarCard userId={userId} today={today} />
           </div>
           <div className="lg:col-span-3 flex flex-col gap-3 md:gap-4">
-            <CompletionsCard userId={userId} today={today} />
+            <GameTimeBankCard userId={userId} />
+            <BlocklistCard userId={userId} />
             <NutritionCard userId={userId} today={today} />
             <GoalsCard userId={userId} />
           </div>

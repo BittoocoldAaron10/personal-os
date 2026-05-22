@@ -77,6 +77,32 @@ export interface CalendarEvent {
   updated_at?: string
   completed_at?: string | null
   completed_dates?: string[]
+  difficulty?: 'quick' | 'main'
+  created_at: string
+}
+
+export interface UserXPStats {
+  user_id: string
+  total_xp: number
+  minutes_redeemed: number
+  updated_at: string
+}
+
+export interface BlocklistItem {
+  id: string
+  user_id: string
+  kind: 'app' | 'site'
+  value: string
+  label?: string | null
+  created_at: string
+}
+
+export interface GameSession {
+  id: string
+  user_id: string
+  minutes: number
+  started_at: string
+  ends_at: string
   created_at: string
 }
 

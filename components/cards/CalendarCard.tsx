@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { CalendarEvent } from '@/lib/types'
 import { weekStart, addDays, streakFromDates } from '@/lib/dateKey'
-import { onRefresh } from '@/lib/bus'
+import { onRefresh, emitRefresh } from '@/lib/bus'
 import { toast } from '@/lib/toast'
+import { xpForTask, XP_PER_TASK, type Difficulty } from '@/lib/xp'
 import Panel from '@/components/Panel'
-import { Plus, Clock, X, Check, RefreshCw, Link2, Loader2, Copy, Flame } from 'lucide-react'
+import { Plus, Clock, X, Check, RefreshCw, Link2, Loader2, Copy, Flame, Zap } from 'lucide-react'
 
 interface SyncStatus {
   configured: boolean
@@ -33,6 +34,7 @@ export default function CalendarCard({ userId, today }: { userId: string; today:
   const [adding, setAdding] = useState(false)
   const [title, setTitle] = useState('')
   const [time, setTime] = useState('09:00')
+  const [difficulty, setDifficulty] = useState<Difficulty>('quick')
 
   // Google Calendar sync
   const [sync, setSync] = useState<SyncStatus | null>(null)
@@ -117,12 +119,14 @@ export default function CalendarCard({ userId, today }: { userId: string; today:
     const eh = String(Math.min(23, sh + 1)).padStart(2, '0')
     setTitle('')
     setAdding(false)
+    setDifficulty('quick')
     const { data, error } = await supabase
       .from('calendar_events')
       .insert([
         {
           user_id: userId,
           title: t,
+          difficulty,
           start_time: `${selected}T${time}:00`,
           end_time: `${selected}T${eh}:${time.split(':')[1]}:00`,
         },
@@ -160,29 +164,51 @@ export default function CalendarCard({ userId, today }: { userId: string; today:
     await supabase.from('calendar_events').delete().eq('id', id)
   }
 
+  const awardXP = useCallback(
+    async (delta: number) => {
+      const { data } = await supabase
+        .from('user_xp_stats')
+        .select('total_xp, minutes_redeemed')
+        .eq('user_id', userId)
+        .maybeSingle()
+      const nextXp = Math.max(0, (data?.total_xp || 0) + delta)
+      await supabase.from('user_xp_stats').upsert({
+        user_id: userId,
+        total_xp: nextXp,
+        minutes_redeemed: data?.minutes_redeemed || 0,
+        updated_at: new Date().toISOString(),
+      })
+    },
+    [userId]
+  )
+
   const toggleCompletion = async (ev: CalendarEvent) => {
     const dates = ev.completed_dates || []
     const done = dates.includes(today)
     const next = done ? dates.filter((d) => d !== today) : [...dates, today]
+    const stamp = next.length > 0 ? new Date().toISOString() : null
 
     // Optimistic update
     setEvents((prev) =>
-      prev.map((e) =>
-        e.id === ev.id
-          ? { ...e, completed_dates: next, completed_at: next.length > 0 ? new Date().toISOString() : null }
-          : e
-      )
+      prev.map((e) => (e.id === ev.id ? { ...e, completed_dates: next, completed_at: stamp } : e))
     )
 
     const { error } = await supabase
       .from('calendar_events')
-      .update({ completed_dates: next, completed_at: next.length > 0 ? new Date().toISOString() : null })
+      .update({ completed_dates: next, completed_at: stamp })
       .eq('id', ev.id)
 
     if (error) {
       console.error('completion toggle failed:', error)
       load()
+      return
     }
+
+    // Award XP for completing the task — or claw it back when un-completing.
+    const xp = xpForTask(ev.difficulty)
+    await awardXP(done ? -xp : xp)
+    emitRefresh()
+    if (!done) toast(`+${xp} EXP earned`)
   }
 
   const connect = async () => {
@@ -302,24 +328,45 @@ export default function CalendarCard({ userId, today }: { userId: string; today:
       </div>
 
       {adding && (
-        <div className="flex gap-2 mt-3">
-          <input
-            autoFocus
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addEvent()}
-            placeholder="Event title…"
-            className="flex-1 px-2.5 py-1.5 text-[12px] min-w-0"
-          />
-          <input
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            className="px-2 py-1.5 text-[12px] w-[92px] shrink-0"
-          />
-          <button onClick={addEvent} className="px-2.5 rounded-md bg-accent/15 text-accent shrink-0">
-            <Check size={13} />
-          </button>
+        <div className="mt-3 space-y-2">
+          <div className="flex gap-2">
+            <input
+              autoFocus
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addEvent()}
+              placeholder="Event title…"
+              className="flex-1 px-2.5 py-1.5 text-[12px] min-w-0"
+            />
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="px-2 py-1.5 text-[12px] w-[92px] shrink-0"
+            />
+            <button onClick={addEvent} className="px-2.5 rounded-md bg-accent/15 text-accent shrink-0">
+              <Check size={13} />
+            </button>
+          </div>
+          <div className="flex gap-1.5">
+            {(['quick', 'main'] as Difficulty[]).map((d) => (
+              <button
+                key={d}
+                onClick={() => setDifficulty(d)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md border font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                  difficulty === d
+                    ? 'border-accent/50 bg-accent/10 text-accent'
+                    : 'border-line text-ink-faint hover:border-line-bright'
+                }`}
+              >
+                {d === 'quick' ? 'Quick task' : 'Main task'}
+                <span className="text-warm">+{XP_PER_TASK[d]}</span>
+              </button>
+            ))}
+            <span className="flex-1 self-center text-right font-mono text-[9px] text-ink-faint">
+              Main tasks = study / workout / hobby blocks
+            </span>
+          </div>
         </div>
       )}
 
@@ -360,6 +407,14 @@ export default function CalendarCard({ userId, today }: { userId: string; today:
                   </span>
                   <span className={`flex-1 text-[12.5px] truncate ${done ? 'text-ink-faint line-through' : 'text-ink'}`}>
                     {e.title}
+                  </span>
+                  <span
+                    className={`flex items-center gap-0.5 font-mono text-[9px] shrink-0 ${
+                      done ? 'text-accent' : 'text-ink-faint'
+                    }`}
+                    title={e.difficulty === 'main' ? 'Main task' : 'Quick task'}
+                  >
+                    <Zap size={9} /> {xpForTask(e.difficulty)}
                   </span>
                   {streak > 0 && (
                     <span className="flex items-center gap-0.5 font-mono text-[9px] text-warm shrink-0">
