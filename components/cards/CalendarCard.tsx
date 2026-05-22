@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { CalendarEvent } from '@/lib/types'
-import { weekStart, addDays } from '@/lib/dateKey'
+import { weekStart, addDays, streakFromDates } from '@/lib/dateKey'
 import { onRefresh } from '@/lib/bus'
 import { toast } from '@/lib/toast'
 import Panel from '@/components/Panel'
-import { Plus, Clock, X, Check, RefreshCw, Link2, Loader2, Copy } from 'lucide-react'
+import { Plus, Clock, X, Check, RefreshCw, Link2, Loader2, Copy, Flame } from 'lucide-react'
 
 interface SyncStatus {
   configured: boolean
@@ -107,6 +107,8 @@ export default function CalendarCard({ userId, today }: { userId: string; today:
   }, [loadStatus, runSync])
 
   const dayEvents = events.filter((e) => (e.start_time || '').slice(0, 10) === selected)
+  const completedToday = dayEvents.filter((e) => (e.completed_dates || []).includes(today)).length
+  const completionPct = dayEvents.length ? Math.round((completedToday / dayEvents.length) * 100) : 0
 
   const addEvent = async () => {
     const t = title.trim()
@@ -156,6 +158,31 @@ export default function CalendarCard({ userId, today }: { userId: string; today:
       }).catch(() => {})
     }
     await supabase.from('calendar_events').delete().eq('id', id)
+  }
+
+  const toggleCompletion = async (ev: CalendarEvent) => {
+    const dates = ev.completed_dates || []
+    const done = dates.includes(today)
+    const next = done ? dates.filter((d) => d !== today) : [...dates, today]
+
+    // Optimistic update
+    setEvents((prev) =>
+      prev.map((e) =>
+        e.id === ev.id
+          ? { ...e, completed_dates: next, completed_at: next.length > 0 ? new Date().toISOString() : null }
+          : e
+      )
+    )
+
+    const { error } = await supabase
+      .from('calendar_events')
+      .update({ completed_dates: next, completed_at: next.length > 0 ? new Date().toISOString() : null })
+      .eq('id', ev.id)
+
+    if (error) {
+      console.error('completion toggle failed:', error)
+      load()
+    }
   }
 
   const connect = async () => {
@@ -210,11 +237,18 @@ export default function CalendarCard({ userId, today }: { userId: string; today:
       num="04"
       title="CALENDAR"
       status={
-        <span className="text-ink-faint">
-          {new Date(today + 'T00:00:00')
-            .toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-            .toUpperCase()}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-ink-faint">
+            {new Date(today + 'T00:00:00')
+              .toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+              .toUpperCase()}
+          </span>
+          {dayEvents.length > 0 && (
+            <span className="text-ink-dim text-[10px]">
+              {completedToday}/{dayEvents.length} · {completionPct}%
+            </span>
+          )}
+        </div>
       }
       accessory={
         <div className="flex items-center gap-2">
@@ -300,27 +334,51 @@ export default function CalendarCard({ userId, today }: { userId: string; today:
         {dayEvents.length === 0 ? (
           <div className="text-[12px] text-ink-faint py-1">No events. Press + to add one.</div>
         ) : (
-          dayEvents.map((e) => (
-            <div
-              key={e.id}
-              className="group flex items-center gap-2.5 p-2 rounded-md bg-white/[0.02] border border-line"
-            >
-              <Clock size={12} className="text-accent shrink-0" />
-              <span className="font-mono text-[11px] text-ink-dim tabular-nums">
-                {(e.start_time || '').slice(11, 16)}
-              </span>
-              <span className="flex-1 text-[12.5px] text-ink truncate">{e.title}</span>
-              {e.google_event_id && (
-                <Link2 size={10} className="text-ink-faint shrink-0" aria-label="Synced with Google" />
-              )}
-              <button
-                onClick={() => removeEvent(e.id)}
-                className="opacity-0 group-hover:opacity-100 text-ink-faint hover:text-hot transition-all shrink-0"
-              >
-                <X size={12} />
-              </button>
+          <div className="space-y-1.5">
+            <div className="h-1 rounded-full bg-white/[0.05] overflow-hidden">
+              <div className="h-full bg-accent transition-all duration-300" style={{ width: `${completionPct}%` }} />
             </div>
-          ))
+            {dayEvents.map((e) => {
+              const done = (e.completed_dates || []).includes(today)
+              const streak = streakFromDates(e.completed_dates || [], today)
+              return (
+                <div
+                  key={e.id}
+                  className="group flex items-center gap-2.5 p-2 rounded-md bg-white/[0.02] border border-line"
+                >
+                  <button
+                    onClick={() => toggleCompletion(e)}
+                    className={`h-4 w-4 shrink-0 rounded-sm border grid place-items-center transition-colors ${
+                      done ? 'bg-accent border-accent text-bg' : 'border-line-bright text-transparent hover:border-accent'
+                    }`}
+                  >
+                    <Check size={11} strokeWidth={3} />
+                  </button>
+                  <Clock size={12} className={done ? 'text-ink-faint' : 'text-accent'} />
+                  <span className="font-mono text-[11px] text-ink-dim tabular-nums">
+                    {(e.start_time || '').slice(11, 16)}
+                  </span>
+                  <span className={`flex-1 text-[12.5px] truncate ${done ? 'text-ink-faint line-through' : 'text-ink'}`}>
+                    {e.title}
+                  </span>
+                  {streak > 0 && (
+                    <span className="flex items-center gap-0.5 font-mono text-[9px] text-warm shrink-0">
+                      <Flame size={9} /> {streak}
+                    </span>
+                  )}
+                  {e.google_event_id && (
+                    <Link2 size={10} className="text-ink-faint shrink-0" aria-label="Synced with Google" />
+                  )}
+                  <button
+                    onClick={() => removeEvent(e.id)}
+                    className="opacity-0 group-hover:opacity-100 text-ink-faint hover:text-hot transition-all shrink-0"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
         )}
       </div>
 
